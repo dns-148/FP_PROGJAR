@@ -1,21 +1,56 @@
-from socket import socket, AF_INET, SOCK_STREAM, error
+import socket
+import sys
+from socket import _GLOBAL_DEFAULT_TIMEOUT
 
-client_ftp = socket(AF_INET, SOCK_STREAM)
-client_ftp.connect (('10.151.43.131', 21))
+ftp_port = 21
+def_timeout = _GLOBAL_DEFAULT_TIMEOUT
+break_line = '\r\n'
+max_line = 1024
+ftp_reply = ''
+ftp_host = '192.168.100.18'
+ftp_socket = None
 
-welcome_msg = str(client_ftp.recv(1024)).rstrip()
+def send_ftp_server(S):
+	ftp_command = S + break_line
+	ftp_socket.send(ftp_command)
+	temp = ftp_socket.recv(max_line)
+	sys.stdout.write(temp)
+	return
+
+def other(command):
+	ftp_command = command + break_line
+	ftp_socket.send(ftp_command)
+	response = ftp_socket.recv(max_line)
+	print str(response).strip()
+	return
+
+# def creating_data_socket():
+# 	ftp_data_host, ftp_data_port = enter_pasv()
+# 	ftp_data_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+# 	ftp_data_socket.connect((ftp_data_host, ftp_data_port))
+# 	send_ftp_server(command)
+
+ftp_socket = socket.create_connection((ftp_host, ftp_port), def_timeout)
+welcome_msg = str(ftp_socket.recv(2048)).strip()
 print welcome_msg
 
 while True:
-    message = raw_input()
-    client_ftp.send(message+'\r\n')
-    try:
-        response = str(client_ftp.recv(1024)).rstrip()        
-      	print response.rstrip()
-	if message == 'QUIT':
-	    client_ftp.close()
-	    break
+	try:
+		command = raw_input()
+	    
+		if 'RNFR' in command:
+			other(command)
+			command2 = raw_input()
+			other(command2)
+		
+		else:
+			other(command)
+			if 'QUIT' in command:
+				ftp_socket.close()
+				break
 
-    except error, exc:
-	client_ftp.close()
-	sys.exit(0)
+	except socket.error, exc:
+		print exc
+		if ftp_socket is not None:
+			ftp_socket.close()
+		sys.exit(0)
