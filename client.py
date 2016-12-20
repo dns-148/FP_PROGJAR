@@ -17,6 +17,30 @@ def send_ftp_server(S):
 	sys.stdout.write(temp)
 	return
 
+def enter_pasv():
+	ftp_command = 'PASV' + break_line
+	ftp_socket.send(ftp_command)
+	ftp_response = ftp_socket.recv(max_line)
+	error_flag = ''
+
+	if ftp_response[:3] != '227':
+		error_flag = 'Error'
+
+	if error_flag != 'Error':
+		global response_regex
+		if response_regex is None:
+			import re
+			response_regex = re.compile(r'(\d+),(\d+),(\d+),(\d+),(\d+),(\d+)')
+		result = response_regex.search(ftp_response)
+		add_group = result.groups()
+		port = (int(add_group[4]) * 256) + int(add_group[5])
+		host = ftp_socket.getpeername()[0]
+		return host, port
+
+	else:
+		sys.stdout.write(ftp_response)
+		return error_flag, 0
+
 def other(command):
 	ftp_command = command + break_line
 	ftp_socket.send(ftp_command)
@@ -37,6 +61,24 @@ print welcome_msg
 while True:
 	try:
 		command = raw_input()
+	    
+		if 'RETR' in command:
+			ftp_data_host, ftp_data_port = enter_pasv()
+			ftp_data_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+			ftp_data_socket.connect((ftp_data_host, ftp_data_port))
+			send_ftp_server(command)
+			filename = command.split(' ')
+			with open(filename[1], 'wb') as file:
+				while True:
+					temp = ftp_data_socket.recv(max_line)
+					file.write(temp)
+					flag = ftp_socket.recv(max_line)
+					if '226' in flag:
+						sys.stdout.write(flag)
+						file.close()
+						break
+			ftp_data_socket.close()
+		
 	    
 		if 'RNFR' in command:
 			other(command)
