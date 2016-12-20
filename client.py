@@ -50,6 +50,7 @@ def other(command):
 	print str(response).strip()
 	return
 
+
 def listing_directory():
 	other('TYPE A')
 	ftp_data_host, ftp_data_port = enter_pasv()
@@ -88,9 +89,20 @@ while True:
 						break
 			ftp_data_socket.close()
 		
+		if 'STOR' in command:
+			ftp_data_host, ftp_data_port = enter_pasv()
+			ftp_data_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+			ftp_data_socket.connect((ftp_data_host, ftp_data_port))
+			send_ftp_server(command)
+			filename = command.split(' ')
+			content = open(filename[1], 'r').read()
+			ftp_data_socket.sendall(content)
+			ftp_data_socket.close()
+			sys.stdout.write(ftp_socket.recv(max_line))
+
 		if 'LIST' in command:
 			listing_directory()
-	    
+		
 		if 'RNFR' in command:
 			other(command)
 			command2 = raw_input()
